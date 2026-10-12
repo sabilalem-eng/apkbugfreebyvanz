@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="mobile-web-app-capable" content="yes">
+<title>SYSTEM LOCKED</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-user-select:none;
+    -webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;
+    font-family:'Consolas','Courier New',monospace;touch-action:none;}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;color:#ff0033;position:fixed;}
+
+  #bg{
+    position:fixed;inset:0;z-index:0;
+    background:
+      radial-gradient(circle at 50% 40%,#1a0000 0%,#050000 55%,#000 85%),
+      repeating-linear-gradient(0deg,rgba(255,0,50,.04) 0px,rgba(255,0,50,.04) 1px,transparent 1px,transparent 3px);
+    animation:bgpulse 2.4s infinite;
+  }
+  @keyframes bgpulse{
+    0%,100%{filter:hue-rotate(0deg) brightness(1);}
+    50%{filter:hue-rotate(-15deg) brightness(1.15);}
+  }
+  #scan{
+    position:fixed;inset:0;z-index:2;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.35) 0px,rgba(0,0,0,.35) 1px,transparent 1px,transparent 2px);
+    mix-blend-mode:multiply;animation:scanmove 8s linear infinite;
+  }
+  @keyframes scanmove{ from{background-position-y:0;} to{background-position-y:100px;} }
+  #vignette{
+    position:fixed;inset:0;z-index:3;pointer-events:none;
+    background:radial-gradient(circle,transparent 40%,rgba(0,0,0,.85) 100%);
+  }
+  #blood{
+    position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;
+    pointer-events:none;overflow:hidden;
+  }
+  .drop{
+    position:absolute;top:-60px;width:3px;border-radius:0 0 50% 50%;
+    background:linear-gradient(to bottom,#8b0000,#ff0033);
+    box-shadow:0 0 8px #ff0033;
+    animation:drip linear infinite;
+  }
+  @keyframes drip{
+    0%{transform:translateY(0);opacity:.9;}
+    100%{transform:translateY(110vh);opacity:0;}
+  }
+
+  #screen{
+    position:fixed;inset:0;z-index:5;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;padding:20px;
+  }
+  #screen h1{
+    font-size:clamp(28px,7vw,72px);letter-spacing:8px;color:#ff0033;
+    text-shadow:0 0 12px #ff0033,0 0 30px #8b0000,0 0 60px #ff0033;
+    animation:glitch 2.5s infinite;position:relative;
+  }
+  #screen h1::before,#screen h1::after{
+    content:attr(data-text);position:absolute;left:0;top:0;width:100%;
+  }
+  #screen h1::before{color:#00ffff;animation:gl1 .3s infinite;clip-path:polygon(0 0,100% 0,100% 45%,0 45%);}
+  #screen h1::after{color:#ff00ff;animation:gl2 .3s infinite;clip-path:polygon(0 55%,100% 55%,100% 100%,0 100%);}
+  @keyframes glitch{
+    0%,80%,100%{transform:translate(0);}
+    82%{transform:translate(-3px,2px);}
+    84%{transform:translate(3px,-2px);}
+    86%{transform:translate(-2px,0);}
+    88%{transform:translate(2px,1px);}
+  }
+  @keyframes gl1{ 0%,100%{transform:translate(0);} 50%{transform:translate(-2px,0);} }
+  @keyframes gl2{ 0%,100%{transform:translate(0);} 50%{transform:translate(2px,0);} }
+
+  #screen p.sub{
+    margin-top:20px;font-size:clamp(12px,2.5vw,18px);color:#a00018;letter-spacing:4px;
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{ 0%,100%{opacity:.7;} 50%{opacity:1;text-shadow:0 0 12px #ff0033;} }
+
+  /* KEYPAD UI */
+  #codeWrap{
+    margin-top:36px;display:flex;flex-direction:column;align-items:center;gap:22px;
+    z-index:10;position:relative;
+  }
+  #dots{display:flex;gap:22px;align-items:center;justify-content:center;}
+  .dot{
+    width:22px;height:22px;border-radius:50%;
+    border:2px solid #ff0033;background:transparent;
+    box-shadow:0 0 8px rgba(255,0,51,.4);
+    transition:.2s;position:relative;
+  }
+  .dot.filled{
+    background:#ff0033;box-shadow:0 0 20px #ff0033,0 0 40px #8b0000;
+    transform:scale(1.15);
+  }
+  .dot.filled::after{
+    content:"";position:absolute;inset:4px;border-radius:50%;
+    background:#ff5577;filter:blur(2px);
+  }
+  .dot.error{background:#ff0033;border-color:#ff0033;animation:dotShake .3s;}
+  @keyframes dotShake{0%,100%{transform:translateX(0);}25%{transform:translateX(-6px);}75%{transform:translateX(6px);}}
+
+  #keypad{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;
+    width:min(75vw,300px);
+  }
+  .key{
+    aspect-ratio:1/1;display:flex;justify-content:center;align-items:center;
+    background:rgba(20,0,0,.85);border:1.5px solid #8b0000;
+    color:#ff0033;font-size:clamp(20px,5vw,28px);font-weight:bold;
+    border-radius:14px;cursor:pointer;
+    text-shadow:0 0 8px #ff0033;
+    box-shadow:inset 0 0 15px rgba(255,0,51,.15),0 0 8px rgba(255,0,51,.25);
+    transition:.12s;user-select:none;font-family:inherit;
+  }
+  .key:active{background:#ff0033;color:#000;text-shadow:none;transform:scale(.94);box-shadow:0 0 30px #ff0033;}
+  .key.action{font-size:clamp(12px,3vw,16px);letter-spacing:1px;}
+  .key.del{color:#a00018;}
+  .key.ok{color:#00ff88;border-color:#006622;text-shadow:0 0 8px #00ff88;}
+  .key.ok:active{background:#00ff88;color:#000;box-shadow:0 0 30px #00ff88;}
+
+  #msg{font-size:13px;color:#ff0033;min-height:20px;letter-spacing:2px;text-shadow:0 0 8px #ff0033;margin-top:6px;}
+
+  /* OVERLAY BLOCKER */
+  #overlay{position:fixed;inset:0;z-index:4;background:transparent;cursor:none;touch-action:none;}
+  #countdown{
+    position:fixed;top:14px;right:18px;z-index:9500;
+    font-size:13px;color:#ff0033;letter-spacing:3px;
+    text-shadow:0 0 8px #ff0033;animation:pulse 1s infinite;
+  }
+  #statusBar{
+    position:fixed;top:14px;left:18px;z-index:9500;
+    font-size:12px;color:#8b0000;letter-spacing:2px;
+  }
+
+  /* WARNING OVERLAY */
+  #warn{
+    position:fixed;inset:0;z-index:9999;background:rgba(30,0,0,.92);
+    display:none;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;padding:20px;
+    backdrop-filter:blur(6px);
+  }
+  #warn.show{display:flex;animation:warnFlash .25s infinite;}
+  @keyframes warnFlash{
+    0%,100%{background:rgba(30,0,0,.92);}
+    50%{background:rgba(80,0,0,.96);}
+  }
+  #warn h2{
+    font-size:clamp(28px,8vw,72px);color:#ff0033;letter-spacing:6px;
+    text-shadow:0 0 20px #ff0033,0 0 60px #8b0000;
+    animation:glitch 1.5s infinite;
+  }
+  #warn p{margin-top:24px;font-size:clamp(14px,3vw,22px);color:#ff5577;letter-spacing:4px;}
+  #warnTimer{
+    margin-top:30px;font-size:clamp(40px,12vw,110px);color:#ff0033;
+    font-weight:bold;text-shadow:0 0 20px #ff0033;animation:timerShake .6s infinite;
+  }
+  @keyframes timerShake{
+    0%,100%{transform:translate(0,0);}
+    25%{transform:translate(-3px,2px);}
+    50%{transform:translate(3px,-2px);}
+    75%{transform:translate(-2px,-3px);}
+  }
+  #warn .sub2{margin-top:20px;font-size:12px;color:#5a0010;letter-spacing:3px;}
+
+  .float{
+    position:fixed;z-index:3;pointer-events:none;
+    font-weight:bold;letter-spacing:4px;white-space:nowrap;
+    text-shadow:0 0 10px currentColor;opacity:0;
+    animation:floatUp linear infinite;
+  }
+  @keyframes floatUp{
+    0%{transform:translateY(30px) scale(.9) rotate(-3deg);opacity:0;}
+    15%{opacity:.85;}
+    85%{opacity:.85;}
+    100%{transform:translateY(-80vh) scale(1.1) rotate(3deg);opacity:0;}
+  }
+</style>
+</head>
+<body>
+
+<div id="bg"></div>
+<div id="blood"></div>
+<div id="scan"></div>
+<div id="vignette"></div>
+
+<div id="screen">
+  <h1 data-text="SYSTEM LOCKED">SYSTEM LOCKED</h1>
+  <p class="sub">- .... . .-. . / .. ... / -. --- / . ... -.-. .- .--. .</p>
+
+  <div id="codeWrap">
+    <div id="dots">
+      <div class="dot" data-i="0"></div>
+      <div class="dot" data-i="1"></div>
+      <div class="dot" data-i="2"></div>
+      <div class="dot" data-i="3"></div>
+    </div>
+
+    <div id="keypad">
+      <button class="key" data-key="1">1</button>
+      <button class="key" data-key="2">2</button>
+      <button class="key" data-key="3">3</button>
+      <button class="key" data-key="4">4</button>
+      <button class="key" data-key="5">5</button>
+      <button class="key" data-key="6">6</button>
+      <button class="key" data-key="7">7</button>
+      <button class="key" data-key="8">8</button>
+      <button class="key" data-key="9">9</button>
+      <button class="key del action" data-key="del">DEL</button>
+      <button class="key" data-key="0">0</button>
+      <button class="key ok action" data-key="ok">OK</button>
+    </div>
+
+    <div id="msg"></div>
+  </div>
+</div>
+
+<div id="statusBar">ROOT::LOCKED</div>
+<div id="countdown">LOCK: ON</div>
+
+<div id="overlay"></div>
+
+<!-- WARNING SCREEN -->
+<div id="warn">
+  <h2 data-text="EXIT DENIED">EXIT DENIED</h2>
+  <p>STAY LOCKED &nbsp;—&nbsp; .-. . - ..- .-. -. / - --- / ... -.-- ... - . --</p>
+  <div id="warnTimer">3</div>
+  <p class="sub2">fullscreen restored automatically</p>
+</div>
+
+<script>
+/* ============================================================
+   H4CK3RAI :: FULLSCREEN LOCK v4 :: FORCED
+   unlock: 6372
+   ============================================================ */
+(function(){
+'use strict';
+
+/* ====== CONFIG ====== */
+const SECRET_CODE       = "6372";
+const REENTER_INTERVAL  = 150;   // lebih cepat
+const WARN_DURATION     = 3;     // detik peringatan saat user coba keluar
+
+/* ====== STATE ====== */
+let unlocked      = false;
+let input         = "";
+let watchdog      = null;
+let warnActive    = false;
+let warnLeft      = 0;
+let warnInterval  = null;
+let lastFSState   = true;
+let isSelfExiting = false;  // penanda saat program sendiri panggil exitFullscreen (tidak dianggap user)
+let lastExitCause = "";
+
+/* ====== ELEMEN ====== */
+const overlay   = document.getElementById('overlay');
+const dots      = document.querySelectorAll('.dot');
+const keys      = document.querySelectorAll('.key');
+const msg       = document.getElementById('msg');
+const countdown = document.getElementById('countdown');
+const statusBar = document.getElementById('statusBar');
+const blood     = document.getElementById('blood');
+const warn      = document.getElementById('warn');
+const warnTimer = document.getElementById('warnTimer');
+
+/* ====== FULLSCREEN ====== */
+function goFullscreen(){
+  if (unlocked) return;
+  const el = document.documentElement;
+  const need = !document.fullscreenElement && !document.webkitFullscreenElement;
+  if (!need) return;
+  try{
+    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if (req){
+      const p = req.call(el);
+      if (p && p.catch) p.catch(()=>{});
+    }
+    if (screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('portrait').catch(()=>{});
+    }
+  }catch(e){}
+}
+
+/* ====== WARNING ====== */
+function showWarning(cause){
+  if (warnActive || unlocked) return;
+  warnActive = true;
+  warnLeft = WARN_DURATION;
+  warnTimer.textContent = warnLeft;
+  warn.classList.add('show');
+  statusBar.textContent = "ALERT::" + (cause || "EXIT_DENIED");
+  if (navigator.vibrate) navigator.vibrate([200,100,200]);
+
+  clearInterval(warnInterval);
+  warnInterval = setInterval(()=>{
+    warnLeft--;
+    warnTimer.textContent = warnLeft > 0 ? warnLeft : 0;
+    if (warnLeft <= 0){
+      clearInterval(warnInterval);
+      warn.classList.remove('show');
+      warnActive = false;
+      statusBar.textContent = "ROOT::LOCKED";
+      goFullscreen();
+      startWatchdog();
+    }
+  }, 1000);
+}
+
+/* ====== WATCHDOG ====== */
+function startWatchdog(){
+  if (watchdog) return;
+  watchdog = setInterval(()=>{
+    if (unlocked) return;
+    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+
+    if (!isFS){
+      countdown.textContent = "LOCK: RE-ENTERING";
+      // hanya tampilkan warning kalau bukan karena program sendiri
+      if (!isSelfExiting && !warnActive){
+        showWarning(lastExitCause || "EXIT_DENIED");
+        lastExitCause = "";
+      } else {
+        goFullscreen();
+      }
+    } else {
+      countdown.textContent = "LOCK: ON";
+      lastFSState = true;
+    }
+  }, REENTER_INTERVAL);
+}
+
+/* ====== UI UPDATE ====== */
+function updateDots(){
+  dots.forEach((d,i)=>{
+    d.classList.toggle('filled', i < input.length);
+    d.classList.remove('error');
+  });
+}
+
+function showError(){
+  msg.textContent = "ACCESS DENIED :: WRONG CODE";
+  dots.forEach(d=>{
+    d.classList.add('error');
+    setTimeout(()=>d.classList.remove('error'), 400);
+  });
+  if (navigator.vibrate) navigator.vibrate(200);
+  document.body.animate(
+    [{filter:'brightness(1)'},{filter:'brightness(2) hue-rotate(-20deg)'},{filter:'brightness(1)'}],
+    {duration:400}
+  );
+}
+
+function showSuccess(){
+  msg.style.color = '#00ff88';
+  msg.textContent = 'ACCESS GRANTED';
+}
+
+/* ====== INPUT HANDLER ====== */
+function pressKey(k){
+  if (unlocked) return;
+  if (k === 'del'){ input = input.slice(0, -1); msg.textContent = ""; updateDots(); return; }
+  if (k === 'ok'){ submit(); return; }
+  if (input.length >= 4) return;
+  input += k;
+  updateDots();
+  if (input.length === 4) setTimeout(submit, 120);
+}
+
+function submit(){
+  if (unlocked) return;
+  if (input === SECRET_CODE){
+    unlocked = true;
+    showSuccess();
+    overlay.style.display = 'none';
+    countdown.textContent = "LOCK: OFF";
+    statusBar.textContent = "ROOT::GRANTED";
+    document.title = "UNLOCKED";
+    clearInterval(watchdog);
+    warn.classList.remove('show');
+    setTimeout(()=>{
+      isSelfExiting = true;
+      try{ if (document.exitFullscreen) document.exitFullscreen(); }catch(e){}
+      try{ if (document.webkitExitFullscreen) document.webkitExitFullscreen(); }catch(e){}
+      setTimeout(()=>{ isSelfExiting = false; }, 500);
+    }, 600);
+    document.querySelectorAll('.float').forEach(el=>el.remove());
+  } else {
+    showError();
+    setTimeout(()=>{ input = ""; updateDots(); msg.textContent = ""; }, 500);
+  }
+}
+
+/* ====== KEYPAD EVENTS ====== */
+keys.forEach(btn=>{
+  btn.addEventListener('click', (e)=>{ e.preventDefault(); e.stopPropagation(); pressKey(btn.dataset.key); });
+  btn.addEventListener('touchstart', (e)=>{ e.preventDefault(); e.stopPropagation(); pressKey(btn.dataset.key); }, {passive:false});
+});
+
+/* ====== KEYBOARD FISIK ====== */
+document.addEventListener('keydown', (e)=>{
+  if (unlocked) return;
+  if (/^[0-9]$/.test(e.key)){ pressKey(e.key); e.preventDefault(); return; }
+  if (e.key === 'Enter'){ submit(); e.preventDefault(); return; }
+  if (e.key === 'Backspace'){ pressKey('del'); e.preventDefault(); return; }
+
+  // kalau user coba ESC / F11 / Alt+F4 / Ctrl+W dsb → picu warning
+  const danger = ['Escape','F11','F12'];
+  const ctrlDanger = e.ctrlKey && ['w','t','n','shift'].includes(e.key.toLowerCase());
+  const altDanger  = e.altKey && e.key === 'F4';
+  if (danger.includes(e.key) || ctrlDanger || altDanger){
+    lastExitCause = e.key;
+    e.preventDefault(); e.stopPropagation();
+    showWarning(e.key);
+    return false;
+  }
+
+  // blok yang lain tanpa warning
+  const blocked = ['F5','F1','F2','F3','F4','F6','F7','F8','F9','F10','Tab','BrowserBack'];
+  if (blocked.includes(e.key) ||
+      (e.ctrlKey && ['r','p','s','o','j','h'].includes(e.key.toLowerCase())) ||
+      (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) ||
+      e.metaKey){
+    e.preventDefault(); e.stopPropagation(); return false;
+  }
+}, true);
+
+/* ====== OVERLAY BLOKIR ====== */
+overlay.addEventListener('click', (e)=>{ if(!unlocked){ e.preventDefault(); goFullscreen(); } });
+overlay.addEventListener('mousedown', (e)=>{ if(!unlocked) e.preventDefault(); });
+overlay.addEventListener('touchstart', (e)=>{ if(!unlocked) e.preventDefault(); }, {passive:false});
+overlay.addEventListener('contextmenu', e=>e.preventDefault());
+
+document.addEventListener('contextmenu', e=>{ if(!unlocked) e.preventDefault(); });
+['dragstart','selectstart','copy','cut','paste'].forEach(ev=>{
+  document.addEventListener(ev, e=>{ if(!unlocked) e.preventDefault(); });
+});
+document.addEventListener('touchmove', e=>{ if(!unlocked) e.preventDefault(); }, {passive:false});
+['gesturestart','gesturechange','gestureend'].forEach(ev=>document.addEventListener(ev, e=>e.preventDefault()));
+
+/* ====== BACK BUTTON ====== */
+history.pushState(null, null, location.href);
+history.pushState(null, null, location.href);
+window.addEventListener('popstate', ()=>{
+  if (unlocked) return;
+  history.pushState(null, null, location.href);
+  lastExitCause = "BACK";
+  showWarning("BACK");
+});
+
+/* ====== FULLSCREEN CHANGE ====== */
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(ev=>{
+  document.addEventListener(ev, ()=>{
+    if (unlocked) return;
+    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    if (!isFS){
+      if (isSelfExiting) return; // tidak warning kalau program sendiri
+      lastExitCause = lastExitCause || "FS_EXIT";
+      showWarning(lastExitCause);
+    }
+  });
+});
+
+/* ====== TAB VISIBILITY / FOCUS ====== */
+document.addEventListener('visibilitychange', ()=>{
+  if (unlocked) return;
+  if (!document.hidden){
+    goFullscreen(); startWatchdog();
+  } else {
+    lastExitCause = "TAB_SWITCH";
+  }
+});
+window.addEventListener('blur',  ()=>{ if(!unlocked){ lastExitCause="BLUR"; setTimeout(()=>{ if(!unlocked){ goFullscreen(); showWarning("BLUR"); }}, 100);} });
+window.addEventListener('focus', ()=>{ if(!unlocked) goFullscreen(); });
+window.addEventListener('resize',()=>{ if(!unlocked) goFullscreen(); });
+window.addEventListener('pageshow',()=>{ if(!unlocked) goFullscreen(); });
+
+/* ====== BLOKIR RELOAD/CLOSE ====== */
+window.addEventListener('beforeunload', (e)=>{
+  if (unlocked) return;
+  e.preventDefault();
+  e.returnValue = '';
+  if (!warnActive) showWarning("RELOAD");
+  return '';
+});
+
+/* ====== FLOATING TEXT ====== */
+const FLOAT_WORDS = [
+  "SYSTEM LOCKED","NO ESCAPE","6372","RUN","HELP","WHY","EXIT DENIED",
+  "ACCESS DENIED","DO NOT CLOSE","STAY","TRAPPED","LOCKED","-.-. --- -.. .",
+  "ERROR 6372","SYSTEM FAILURE","YOU ARE MINE","DONT LEAVE","STAY HERE"
+];
+const FLOAT_COLORS = ["#ff0033","#8b0000","#a00018","#ff0055","#00ffff","#ff00ff"];
+
+function spawnFloat(){
+  if (unlocked) return;
+  const el = document.createElement('div');
+  el.className = 'float';
+  el.textContent = FLOAT_WORDS[Math.floor(Math.random()*FLOAT_WORDS.length)];
+  el.style.color = FLOAT_COLORS[Math.floor(Math.random()*FLOAT_COLORS.length)];
+  el.style.left = (Math.random()*85 + 5) + 'vw';
+  el.style.bottom = '-10vh';
+  const dur = 6 + Math.random()*6;
+  el.style.fontSize = (12 + Math.random()*26) + 'px';
+  el.style.animationDuration = dur + 's';
+  el.style.animationDelay = (Math.random()*2) + 's';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), (dur+2)*1000);
+}
+setInterval(spawnFloat, 900);
+
+/* ====== BLOOD DRIP ====== */
+function spawnDrop(){
+  if (unlocked) return;
+  const d = document.createElement('div');
+  d.className = 'drop';
+  d.style.left = (Math.random()*100) + 'vw';
+  d.style.height = (30 + Math.random()*80) + 'px';
+  const dur = 3 + Math.random()*4;
+  d.style.animationDuration = dur + 's';
+  d.style.animationDelay = (Math.random()*1.5) + 's';
+  d.style.opacity = 0.4 + Math.random()*0.5;
+  blood.appendChild(d);
+  setTimeout(()=>d.remove(), (dur+2)*1000);
+}
+setInterval(spawnDrop, 400);
+
+/* ====== START ====== */
+updateDots();
+goFullscreen();
+startWatchdog();
+
+})();
+</script>
+</body>
+</html>
